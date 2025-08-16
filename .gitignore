@@ -1,0 +1,8 @@
+# Dependências do Node
+node_modules
+
+# Arquivos de build do TypeScript
+dist
+
+# Arquivos de ambiente (se você usar no futuro)
+.env
