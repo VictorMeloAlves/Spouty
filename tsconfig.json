@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "target": "es2016",      // Versão do JavaScript que será gerada
+    "module": "commonjs",     // Sistema de módulos do Node.js
+    "rootDir": "./src",       // Onde está nosso código TypeScript
+    "outDir": "./dist",       // Onde o JavaScript compilado será salvo
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,           // Habilita checagens mais rigorosas
+    "skipLibCheck": true
+  }
+}
