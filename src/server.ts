@@ -1,25 +1,39 @@
 import express, { Request, Response } from 'express';
 
 const app = express();
-// A porta que o Render.com vai usar é passada pela variável de ambiente PORT
 const port = process.env.PORT || 3000;
 
-// Middleware para que o Express entenda requisições com corpo em JSON
 app.use(express.json());
 
-// Nosso primeiro endpoint. Ele "escuta" em /api/led por requisições do tipo POST
+// =================================================================
+//                     *** MUDANÇA IMPORTANTE ***
+// Vamos criar uma variável para guardar o estado desejado do LED.
+// Para um projeto real, isso estaria em um banco de dados.
+let ledState: 'on' | 'off' = 'off'; // Começa como 'off' por padrão
+// =================================================================
+
+// MODIFICADO: Este endpoint agora DEFINE qual deve ser o estado do LED.
+// O app ou o Thunder Client usarão este endpoint para enviar comandos.
 app.post('/api/led', (req: Request, res: Response) => {
-  // req.body contém os dados enviados pelo ESP32 ou pelo App
   const { state } = req.body;
 
-  // Por enquanto, apenas exibimos no console do servidor o que recebemos
-  console.log(`Comando para o LED recebido: ${state}`);
-
-  // Enviamos uma resposta de volta para quem chamou
-  res.status(200).json({ message: `Comando '${state}' recebido com sucesso.` });
+  if (state === 'on' || state === 'off') {
+    ledState = state; // Armazena o novo comando na nossa variável
+    console.log(`Comando recebido e armazenado: ${ledState}`);
+    res.status(200).json({ message: `Comando '${ledState}' armazenado com sucesso.` });
+  } else {
+    res.status(400).json({ message: "Estado inválido. Use 'on' ou 'off'." });
+  }
 });
 
-// Inicia o servidor e o faz "escutar" na porta definida
+// NOVO: Este endpoint é para o ESP32 PERGUNTAR qual o estado.
+// O ESP32 vai chamar este endpoint a cada 10 segundos.
+app.get('/api/led/status', (req: Request, res: Response) => {
+  console.log(`ESP32 perguntou pelo estado. Respondendo com: ${ledState}`);
+  res.status(200).json({ state: ledState });
+});
+
+
 app.listen(port, () => {
   console.log(`🚀 Servidor rodando na porta ${port}`);
 });
