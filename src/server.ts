@@ -47,6 +47,10 @@ app.get('/api/led/status', async (req: Request, res: Response) => {
 //          *** ENDPOINT PARA DADOS DOS SENSORES ***
 // =================================================================
 app.post('/api/sensordata', async (req: Request, res: Response) => {
+
+  // LOG DE DEBUG ADICIONAL:
+  console.log(">>> Endpoint /api/sensordata CHAMADO! Corpo recebido:", req.body);
+  
   // 1. Pega os dados enviados pelo ESP32
   const { luminosity, soilMoisture, uvLevel } = req.body;
 
