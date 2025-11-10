@@ -62,19 +62,19 @@ const difficultyParams: Record<Difficulty, {
   FACIL: {
     UMIDADE_BAIXA: 0.15,
     UMIDADE_ALTA: 0.5,
-    LUZ_BAIXA: 30,
+    LUZ_BAIXA: 2,
     QUOTA_UV_DIARIA: 1
   },
   MEDIO: {
     UMIDADE_BAIXA: 0.3,
     UMIDADE_ALTA: 0.7,
-    LUZ_BAIXA: 50,
+    LUZ_BAIXA: 2,
     QUOTA_UV_DIARIA: 2
   },
   DIFICIL: {
     UMIDADE_BAIXA: 0.5,
     UMIDADE_ALTA: 0.85,
-    LUZ_BAIXA: 100,
+    LUZ_BAIXA: 2,
     QUOTA_UV_DIARIA: 4
   }
 };
