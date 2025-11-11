@@ -29,7 +29,7 @@ const WEATHER_API_KEY = process.env.OPENWEATHER_API_KEY; // API do Clima
 // =================================================================
 //          *** INTERFACES DE TIPO ***
 // =================================================================
-// Define o formato dos nossos parâmetros de dificuldade
+// Define o formato dos parametros de dificuldade
 type Difficulty = 'FACIL' | 'MEDIO' | 'DIFICIL';
 
 // Define o formato da nossa configuração no Firestore
@@ -41,7 +41,7 @@ interface DeviceConfig {
   };
 }
 
-// Define o formato da resposta que esperamos da API de clima
+// Define o formato da resposta da API de clima
 interface WeatherData {
   weather: { main: string; description: string }[];
   main: { temp: number };
@@ -52,7 +52,7 @@ interface WeatherData {
 // =================================================================
 //          *** PERFIS DE DIFICULDADE ***
 // =================================================================
-// Definimos os limites para cada nível, baseados nas suas anotações
+// Define os limites para cada nivel
 const difficultyParams: Record<Difficulty, {
   UMIDADE_BAIXA: number;
   UMIDADE_ALTA: number;
@@ -91,9 +91,9 @@ async function fetchWeather(lat: number, lon: number): Promise<{ isRaining: bool
   const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${WEATHER_API_KEY}&units=metric&lang=pt_br`;
 
   try {
-    // <-- CORREÇÃO 2: Tipar a resposta do axios com nossa Interface
+    
     const response = await axios.get<WeatherData>(url);
-    const data = response.data; // Agora 'data' é do tipo WeatherData
+    const data = response.data;
 
     const weatherMain = data.weather[0].main;
     const isRaining = (weatherMain === "Rain" || weatherMain === "Drizzle" || weatherMain === "Thunderstorm");
@@ -106,7 +106,7 @@ async function fetchWeather(lat: number, lon: number): Promise<{ isRaining: bool
     console.log(`Clima verificado: ${data.weather[0].description}, Noite: ${isNight}`);
     return { isRaining, isNight, temp: data.main.temp };
 
-  } catch (error: any) { // <-- CORREÇÃO 1: Tipar o erro como 'any'
+  } catch (error: any) {
     console.error("Erro ao buscar dados do clima:", error.message || error);
     return { isRaining: false, isNight: true, temp: 0 };
   }
@@ -137,18 +137,18 @@ app.get('/api/led/status', async (req: Request, res: Response) => {
 });
 
 // =================================================================
-//          *** O "CÉREBRO" ATUALIZADO DO SPOUTY ***
+//          *** O "CÉREBRO" DO SPOUTY ***
 // =================================================================
 async function calculatePlantStatus(
   sensors: any, 
-  config: DeviceConfig, // <-- CORREÇÃO 3: Usar nossa interface de Config
+  config: DeviceConfig,
   uvQuotaMet: boolean = false
 ): Promise<string> {
     
-    // <-- CORREÇÃO 3: Agora o TypeScript sabe que config.difficulty é do tipo Difficulty
+
     const params = difficultyParams[config.difficulty];
 
-    // O resto da sua lógica de status (SLEEPING, THIRSTY, etc.)
+    // O resto da lógica de status (SLEEPING, THIRSTY, etc.)
     if (sensors.luminosity < params.LUZ_BAIXA) {
         return "SLEEPING";
     }
@@ -188,7 +188,7 @@ app.post('/api/setlocation', async (req: Request, res: Response) => {
     const configUpdate: Partial<DeviceConfig> = { location: { lat, lon } };
     await db.collection('devices').doc('vaso_01').set({ config: configUpdate }, { merge: true });
     res.status(200).json({ message: "Localização salva com sucesso." });
-  } catch (error: any) { // <-- CORREÇÃO 1: Tipar o erro
+  } catch (error: any) {
     res.status(500).json({ message: "Erro ao salvar localização." });
   }
 });
@@ -204,14 +204,14 @@ app.post('/api/setdifficulty', async (req: Request, res: Response) => {
     const configUpdate: Partial<DeviceConfig> = { difficulty: difficulty as Difficulty };
     await db.collection('devices').doc('vaso_01').set({ config: configUpdate }, { merge: true });
     res.status(200).json({ message: `Dificuldade salva como: ${difficulty}` });
-  } catch (error: any) { // <-- CORREÇÃO 1: Tipar o erro
+  } catch (error: any) {
     res.status(500).json({ message: "Erro ao salvar dificuldade." });
   }
 });
 
 
 
-// --- ENDPOINT PARA O ESP32 ENVIAR DADOS DOS SENSORES (ATUALIZADO) ---
+// --- ENDPOINT PARA O ESP32 ENVIAR DADOS DOS SENSORES ---
 app.post('/api/sensordata', async (req: Request, res: Response) => {
   const { luminosity, soilMoisture, uvLevel } = req.body;
   if (luminosity === undefined || soilMoisture === undefined || uvLevel === undefined) {
@@ -221,7 +221,7 @@ app.post('/api/sensordata', async (req: Request, res: Response) => {
   try {
     const doc = await db.collection('devices').doc('vaso_01').get();
     
-    // <-- CORREÇÃO 3: Usar 'as' para garantir o tipo
+    
     let config = doc.data()?.config as DeviceConfig | undefined;
 
     // Define um padrão se a configuração não existir
@@ -243,13 +243,13 @@ app.post('/api/sensordata', async (req: Request, res: Response) => {
     console.log(`Dados salvos. Status: ${newStatus}`);
     res.status(200).json({ message: "Dados recebidos com sucesso." });
 
-  } catch (error: any) { // <-- CORREÇÃO 1: Tipar o erro
+  } catch (error: any) {
     console.error("Erro no endpoint /sensordata:", error);
     res.status(500).json({ message: "Erro interno." });
   }
 });
 
-// ENDPOINT PARA O ESP32 (E APP) CONTROLAR O LED (Tipado)
+// ENDPOINT PARA O ESP32 (E APP) CONTROLAR O LED
 app.get('/api/led/status', async (req: Request, res: Response) => { 
   try {
     const doc = await db.collection('devices').doc('vaso_01').get();
