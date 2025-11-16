@@ -24,7 +24,7 @@ const db = admin.firestore();
 const app = express();
 const port = process.env.PORT || 3000;
 app.use(express.json());
-const WEATHER_API_KEY = process.env.OPENWEATHER_API_KEY; // API do clima local
+const WEATHER_API_KEY = process.env.OPENWEATHER_API_KEY; // API do clima
 
 // =================================================================
 //          *** INTERFACES DE TIPO ***
@@ -125,14 +125,32 @@ app.post('/api/led', async (req: Request, res: Response) => {
   }
 });
 
-app.get('/api/led/status', async (req: Request, res: Response) => {
-  const doc = await db.collection('devices').doc('vaso_01').get();
-  if (!doc.exists) {
-    res.status(404).json({ message: "Dispositivo não encontrado."});
-  } else {
-    const state = doc.data()?.ledState || 'off';
-    console.log(`Estado do LED lido do Firestore: ${state}`);
-    res.status(200).json({ state });
+app.get('/api/led/status', async (req: Request, res: Response) => { 
+  try {
+    const doc = await db.collection('devices').doc('vaso_01').get();
+    
+    if (!doc.exists) {
+      return res.status(404).json({ 
+        state: 'off', 
+        plantStatus: 'CARREGANDO' 
+      });
+    }
+    const data = doc.data();
+    
+    const ledState = data?.ledState || 'off';
+    
+    const plantStatus = data?.status?.calculatedStatus || 'HAPPY'; // Padrão 'HAPPY'
+
+    console.log(`ESP32 pediu status. Enviando: LED=${ledState}, Status=${plantStatus}`);
+
+    res.status(200).json({ 
+      state: ledState, 
+      plantStatus: plantStatus 
+    });
+
+  } catch(error: any) {
+    console.error("Erro ao buscar estado completo:", error);
+    res.status(500).json({ message: "Erro ao buscar estado." });
   }
 });
 
@@ -246,34 +264,6 @@ app.post('/api/sensordata', async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error("Erro no endpoint /sensordata:", error);
     res.status(500).json({ message: "Erro interno." });
-  }
-});
-
-// ENDPOINT PARA O ESP32 (E APP) CONTROLAR O LED
-app.get('/api/led/status', async (req: Request, res: Response) => { 
-  try {
-    const doc = await db.collection('devices').doc('vaso_01').get();
-    if (!doc.exists) {
-      return res.status(404).json({ message: "Dispositivo não encontrado."});
-    }
-    const state = doc.data()?.ledState || 'off';
-    res.status(200).json({ state });
-  } catch(error: any) {
-    res.status(500).json({ message: "Erro ao buscar estado do LED." });
-  }
-});
-
-app.post('/api/led', async (req: Request, res: Response) => { 
-  try {
-    const { state } = req.body;
-    if (state === 'on' || state === 'off') {
-      await db.collection('devices').doc('vaso_01').set({ ledState: state }, { merge: true });
-      res.status(200).json({ message: `Comando '${state}' armazenado com sucesso.` });
-    } else {
-      res.status(400).json({ message: "Estado inválido. Use 'on' ou 'off'." });
-    }
-  } catch(error: any) {
-    res.status(500).json({ message: "Erro ao definir estado do LED." });
   }
 });
 
