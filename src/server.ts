@@ -24,7 +24,7 @@ const db = admin.firestore();
 const app = express();
 const port = process.env.PORT || 3000;
 app.use(express.json());
-const WEATHER_API_KEY = process.env.OPENWEATHER_API_KEY; // API do Clima
+const WEATHER_API_KEY = process.env.OPENWEATHER_API_KEY; // API do clima local
 
 // =================================================================
 //          *** INTERFACES DE TIPO ***
