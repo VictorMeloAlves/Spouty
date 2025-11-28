@@ -32,7 +32,7 @@ const WEATHER_API_KEY = process.env.OPENWEATHER_API_KEY; // API do clima
 // Define o formato dos parametros de dificuldade
 type Difficulty = 'FACIL' | 'MEDIO' | 'DIFICIL';
 
-// Define o formato da nossa configuração no Firestore
+// Define o formato da configuração no Firestore
 interface DeviceConfig {
   difficulty: Difficulty;
   location?: {
@@ -52,7 +52,7 @@ interface WeatherData {
 // =================================================================
 //          *** PERFIS DE DIFICULDADE ***
 // =================================================================
-// Define os limites para cada nivel
+
 const difficultyParams: Record<Difficulty, {
   UMIDADE_BAIXA: number;
   UMIDADE_ALTA: number;
@@ -82,33 +82,37 @@ const difficultyParams: Record<Difficulty, {
 // =================================================================
 //          *** FUNÇÃO DE CHAMADA DE CLIMA ***
 // =================================================================
-async function fetchWeather(lat: number, lon: number): Promise<{ isRaining: boolean, isNight: boolean, temp: number }> {
+async function fetchWeather(lat: number, lon: number): Promise<{ 
+  condition: string, 
+  description: string, 
+  temp: number, 
+  isNight: boolean 
+}> {
   if (!WEATHER_API_KEY) {
-    console.error("ERRO: Chave da API OpenWeatherMap não configurada.");
-    return { isRaining: false, isNight: true, temp: 0 };
+    return { condition: 'Unknown', description: '--', temp: 0, isNight: false };
   }
   
   const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${WEATHER_API_KEY}&units=metric&lang=pt_br`;
 
   try {
-    
     const response = await axios.get<WeatherData>(url);
     const data = response.data;
-
-    const weatherMain = data.weather[0].main;
-    const isRaining = (weatherMain === "Rain" || weatherMain === "Drizzle" || weatherMain === "Thunderstorm");
 
     const currentTime = data.dt;
     const sunrise = data.sys.sunrise;
     const sunset = data.sys.sunset;
     const isNight = (currentTime < sunrise || currentTime > sunset);
 
-    console.log(`Clima verificado: ${data.weather[0].description}, Noite: ${isNight}`);
-    return { isRaining, isNight, temp: data.main.temp };
+    return { 
+      condition: data.weather[0].main, // Ex: "Rain", "Clear"
+      description: data.weather[0].description, // Ex: "chuva leve"
+      temp: data.main.temp,
+      isNight: isNight
+    };
 
   } catch (error: any) {
-    console.error("Erro ao buscar dados do clima:", error.message || error);
-    return { isRaining: false, isNight: true, temp: 0 };
+    console.error("Erro ao buscar clima:", error.message);
+    return { condition: 'Error', description: 'Erro na API', temp: 0, isNight: false };
   }
 }
 
@@ -116,7 +120,6 @@ async function fetchWeather(lat: number, lon: number): Promise<{ isRaining: bool
 app.post('/api/led', async (req: Request, res: Response) => {
   const { state } = req.body;
   if (state === 'on' || state === 'off') {
-    // merge: true para não apagar outros dados do documento
     await db.collection('devices').doc('vaso_01').set({ ledState: state }, { merge: true });
     console.log(`Comando '${state}' armazenado no Firestore.`);
     res.status(200).json({ message: `Comando '${state}' armazenado com sucesso.` });
@@ -139,7 +142,7 @@ app.get('/api/led/status', async (req: Request, res: Response) => {
     
     const ledState = data?.ledState || 'off';
     
-    const plantStatus = data?.status?.calculatedStatus || 'HAPPY'; // Padrão 'HAPPY'
+    const plantStatus = data?.status?.calculatedStatus || 'HAPPY'; // Padrão
 
     console.log(`ESP32 pediu status. Enviando: LED=${ledState}, Status=${plantStatus}`);
 
@@ -166,7 +169,6 @@ async function calculatePlantStatus(
 
     const params = difficultyParams[config.difficulty];
 
-    // O resto da lógica de status (SLEEPING, THIRSTY, etc.)
     if (sensors.luminosity < params.LUZ_BAIXA) {
         return "SLEEPING";
     }
@@ -239,18 +241,28 @@ app.post('/api/sensordata', async (req: Request, res: Response) => {
   try {
     const doc = await db.collection('devices').doc('vaso_01').get();
     
-    
     let config = doc.data()?.config as DeviceConfig | undefined;
 
-    // Define um padrão se a configuração não existir
-    if (!config || !config.difficulty) {
+    if (!config || !config.difficulty) { // Define como padrão caso não exista
       config = { difficulty: 'MEDIO' };
+    }
+
+    let weatherInfo = { condition: 'Unknown', description: 'Sem dados', temp: 0, isNight: false };
+    
+    if (config && config.location) {
+       weatherInfo = await fetchWeather(config.location.lat, config.location.lon);
     }
 
     const newStatus = await calculatePlantStatus({ luminosity, soilMoisture, uvLevel }, config);
 
     const dataToSave = {
       sensors: { luminosity, soilMoisture, uvLevel },
+      weather: {
+        temp: weatherInfo.temp,
+        description: weatherInfo.description,
+        isNight: weatherInfo.isNight,
+        condition: weatherInfo.condition
+      },
       status: {
         calculatedStatus: newStatus,
         lastUpdate: admin.firestore.FieldValue.serverTimestamp()
