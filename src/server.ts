@@ -166,25 +166,20 @@ async function calculatePlantStatus(
   uvQuotaMet: boolean = false
 ): Promise<string> {
     
-
     const params = difficultyParams[config.difficulty];
 
-    if (sensors.luminosity < params.LUZ_BAIXA) {
-        return "SLEEPING";
-    }
-    if (sensors.soilMoisture < params.UMIDADE_BAIXA) {
-        return "THIRSTY";
-    }
-    if (sensors.soilMoisture > params.UMIDADE_ALTA) {
-        return "OVERWATERED";
-    }
+    if (sensors.luminosity < params.LUZ_BAIXA) return "SLEEPING";
+    if (sensors.soilMoisture < params.UMIDADE_BAIXA) return "THIRSTY";
+    if (sensors.soilMoisture > params.UMIDADE_ALTA) return "OVERWATERED";
+
     if (!uvQuotaMet) {
-        if (!config.location) {
-            return "SAD_NEEDS_SUN"; 
-        }
+        if (!config.location) return "SAD_NEEDS_SUN"; 
+        
         const weather = await fetchWeather(config.location.lat, config.location.lon);
         
-        if (weather.isNight || weather.isRaining) {
+        const isRaining = ['Rain', 'Drizzle', 'Thunderstorm'].includes(weather.condition);
+
+        if (weather.isNight || isRaining) {
             return "SAD_NEEDS_SUN";
         } else {
             return "NEEDS_SUN_NOW";
@@ -257,12 +252,7 @@ app.post('/api/sensordata', async (req: Request, res: Response) => {
 
     const dataToSave = {
       sensors: { luminosity, soilMoisture, uvLevel },
-      weather: {
-        temp: weatherInfo.temp,
-        description: weatherInfo.description,
-        isNight: weatherInfo.isNight,
-        condition: weatherInfo.condition
-      },
+      weather: weatherInfo,
       status: {
         calculatedStatus: newStatus,
         lastUpdate: admin.firestore.FieldValue.serverTimestamp()
