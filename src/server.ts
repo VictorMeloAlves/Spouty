@@ -63,7 +63,7 @@ const difficultyParams: Record<Difficulty, {
     UMIDADE_BAIXA: 0.15,
     UMIDADE_ALTA: 0.7,
     LUZ_BAIXA: 0.5,
-    QUOTA_UV_DIARIA: 1
+    QUOTA_UV_DIARIA: 0
   },
   MEDIO: {
     UMIDADE_BAIXA: 0.3,
